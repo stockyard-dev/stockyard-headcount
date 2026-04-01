@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  headcount:
+    build: .
+    ports:
+      - "9160:9160"
+    environment:
+      - PORT=9160
+      - DATA_DIR=/data
+      - HEADCOUNT_LICENSE_KEY=
+    volumes:
+      - headcount_data:/data
+    restart: unless-stopped
+volumes:
+  headcount_data:
