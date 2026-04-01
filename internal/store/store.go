@@ -1,54 +1,20 @@
 package store
-
-import (
-	"database/sql"
-	"fmt"
-	"os"
-	"path/filepath"
-
-	_ "modernc.org/sqlite"
-)
-
-type DB struct {
-	*sql.DB
-}
-
-func Open(dataDir string) (*DB, error) {
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf("mkdir: %w", err)
-	}
-	dsn := filepath.Join(dataDir, "headcount.db") + "?_journal_mode=WAL&_busy_timeout=5000"
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("open: %w", err)
-	}
-	db.SetMaxOpenConns(1)
-	if err := migrate(db); err != nil {
-		return nil, fmt.Errorf("migrate: %w", err)
-	}
-	return &DB{db}, nil
-}
-
-func migrate(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        title TEXT,
-        department TEXT,
-        email TEXT,
-        phone TEXT,
-        location TEXT,
-        manager_id INTEGER,
-        start_date TEXT,
-        bio TEXT,
-        avatar_url TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS departments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        head_id INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );`)
-	return err
-}
+import("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{*sql.DB}
+type Department struct{ID int64 `json:"id"`;Name string `json:"name"`;HeadCount int `json:"head_count,omitempty"`;CreatedAt time.Time `json:"created_at"`}
+type Employee struct{ID int64 `json:"id"`;DeptID int64 `json:"dept_id"`;DeptName string `json:"dept_name,omitempty"`;FirstName string `json:"first_name"`;LastName string `json:"last_name"`;Email string `json:"email"`;Title string `json:"title"`;StartDate string `json:"start_date"`;Status string `json:"status"`;CreatedAt time.Time `json:"created_at"`}
+type LeaveRequest struct{ID int64 `json:"id"`;EmployeeID int64 `json:"employee_id"`;EmployeeName string `json:"employee_name,omitempty"`;LeaveType string `json:"leave_type"`;StartDate string `json:"start_date"`;EndDate string `json:"end_date"`;Status string `json:"status"`;Notes string `json:"notes"`;CreatedAt time.Time `json:"created_at"`}
+func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"headcount.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
+func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS departments(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,dept_id INTEGER NOT NULL,first_name TEXT NOT NULL,last_name TEXT NOT NULL,email TEXT DEFAULT '',title TEXT DEFAULT '',start_date TEXT DEFAULT '',status TEXT DEFAULT 'active',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS leave_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,leave_type TEXT DEFAULT 'vacation',start_date TEXT NOT NULL,end_date TEXT NOT NULL,status TEXT DEFAULT 'pending',notes TEXT DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);return err}
+func(db *DB)ListDepartments()([]Department,error){rows,err:=db.Query(`SELECT d.id,d.name,COUNT(e.id),d.created_at FROM departments d LEFT JOIN employees e ON e.dept_id=d.id AND e.status='active' GROUP BY d.id ORDER BY d.name`);if err!=nil{return nil,err};defer rows.Close();var out[]Department;for rows.Next(){var d Department;rows.Scan(&d.ID,&d.Name,&d.HeadCount,&d.CreatedAt);out=append(out,d)};return out,nil}
+func(db *DB)CreateDepartment(d *Department)error{res,err:=db.Exec(`INSERT INTO departments(name)VALUES(?)`,d.Name);if err!=nil{return err};d.ID,_=res.LastInsertId();return nil}
+func(db *DB)DeleteDepartment(id int64)error{_,err:=db.Exec(`DELETE FROM departments WHERE id=?`,id);return err}
+func(db *DB)ListEmployees(deptID int64)([]Employee,error){q:=`SELECT e.id,e.dept_id,COALESCE(d.name,''),e.first_name,e.last_name,e.email,e.title,e.start_date,e.status,e.created_at FROM employees e LEFT JOIN departments d ON d.id=e.dept_id`;var rows *sql.Rows;var err error;if deptID>0{rows,err=db.Query(q+` WHERE e.dept_id=? ORDER BY e.last_name`,deptID)}else{rows,err=db.Query(q+` ORDER BY e.last_name`)};if err!=nil{return nil,err};defer rows.Close();var out[]Employee;for rows.Next(){var e Employee;rows.Scan(&e.ID,&e.DeptID,&e.DeptName,&e.FirstName,&e.LastName,&e.Email,&e.Title,&e.StartDate,&e.Status,&e.CreatedAt);out=append(out,e)};return out,nil}
+func(db *DB)CreateEmployee(e *Employee)error{res,err:=db.Exec(`INSERT INTO employees(dept_id,first_name,last_name,email,title,start_date,status)VALUES(?,?,?,?,?,?,?)`,e.DeptID,e.FirstName,e.LastName,e.Email,e.Title,e.StartDate,e.Status);if err!=nil{return err};e.ID,_=res.LastInsertId();return nil}
+func(db *DB)UpdateEmployeeStatus(id int64,status string)error{_,err:=db.Exec(`UPDATE employees SET status=? WHERE id=?`,status,id);return err}
+func(db *DB)DeleteEmployee(id int64)error{_,err:=db.Exec(`DELETE FROM employees WHERE id=?`,id);return err}
+func(db *DB)ListLeaveRequests(status string)([]LeaveRequest,error){q:=`SELECT l.id,l.employee_id,COALESCE(e.first_name||' '||e.last_name,''),l.leave_type,l.start_date,l.end_date,l.status,l.notes,l.created_at FROM leave_requests l LEFT JOIN employees e ON e.id=l.employee_id`;var rows *sql.Rows;var err error;if status!=""{rows,err=db.Query(q+` WHERE l.status=? ORDER BY l.created_at DESC`,status)}else{rows,err=db.Query(q+` ORDER BY l.created_at DESC LIMIT 50`)};if err!=nil{return nil,err};defer rows.Close();var out[]LeaveRequest;for rows.Next(){var l LeaveRequest;rows.Scan(&l.ID,&l.EmployeeID,&l.EmployeeName,&l.LeaveType,&l.StartDate,&l.EndDate,&l.Status,&l.Notes,&l.CreatedAt);out=append(out,l)};return out,nil}
+func(db *DB)CreateLeaveRequest(l *LeaveRequest)error{res,err:=db.Exec(`INSERT INTO leave_requests(employee_id,leave_type,start_date,end_date,notes)VALUES(?,?,?,?,?)`,l.EmployeeID,l.LeaveType,l.StartDate,l.EndDate,l.Notes);if err!=nil{return err};l.ID,_=res.LastInsertId();l.Status="pending";return nil}
+func(db *DB)UpdateLeaveStatus(id int64,status string)error{_,err:=db.Exec(`UPDATE leave_requests SET status=? WHERE id=?`,status,id);return err}
+func(db *DB)CountEmployees()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM employees WHERE status='active'`).Scan(&n);return n,nil}
+func(db *DB)CountPending()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM leave_requests WHERE status='pending'`).Scan(&n);return n,nil}

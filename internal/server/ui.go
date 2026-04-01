@@ -1,120 +1,51 @@
 package server
 
 var dashboardHTML = []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stockyard Headcount</title>
-<style>
-  :root {
-    --bg: #1a1410;
-    --surface: #241c15;
-    --border: #3d2e1e;
-    --rust: #c4622d;
-    --leather: #8b5e3c;
-    --cream: #f5e6c8;
-    --muted: #7a6550;
-    --text: #e8d5b0;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace, sans-serif; min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  .logo { color: var(--rust); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
-  .badge { background: var(--rust); color: var(--cream); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
-  main { max-width: 960px; margin: 2rem auto; padding: 0 2rem; }
-  .hero { text-align: center; padding: 3rem 0 2rem; }
-  .hero h1 { font-size: 2rem; color: var(--cream); margin-bottom: 0.5rem; }
-  .hero p { color: var(--muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; text-align: center; }
-  .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--rust); }
-  .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
-  .card h2 { font-size: 1rem; color: var(--cream); margin-bottom: 1rem; }
-  .tier-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .tier { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
-  .tier.pro { border-color: var(--rust); }
-  .tier-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
-  .tier.pro .tier-name { color: var(--rust); }
-  .tier-desc { font-size: 0.85rem; color: var(--text); }
-  .tier-price { font-size: 0.8rem; color: var(--leather); margin-top: 0.5rem; }
-  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.75rem; }
-  footer a { color: var(--leather); text-decoration: none; }
-  .endpoint-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .endpoint-table th { text-align: left; color: var(--muted); padding: 0.5rem; border-bottom: 1px solid var(--border); }
-  .endpoint-table td { padding: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  .method { color: var(--rust); font-weight: 600; }
-</style>
-</head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stockyard Headcount</title><style>:root{--bg:#1a1410;--surface:#241c15;--border:#3d2e1e;--rust:#c4622d;--leather:#8b5e3c;--cream:#f5e6c8;--muted:#7a6550;--text:#e8d5b0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace,sans-serif;min-height:100vh}header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem}.logo{color:var(--rust);font-size:1.25rem;font-weight:700}.badge{background:var(--rust);color:var(--cream);font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:3px;font-weight:600;text-transform:uppercase}main{max-width:1100px;margin:0 auto;padding:2rem}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}.stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;text-align:center}.stat-value{font-size:1.75rem;font-weight:700;color:var(--rust)}.stat-label{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em}.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem}.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem}.card h2{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem}.full{grid-column:1/-1}.form-row{display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap}select,input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1}.btn{background:var(--rust);color:var(--cream);border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}.btn:hover{opacity:0.85}.btn-sm{padding:0.25rem 0.6rem;font-size:0.75rem}.btn-danger{background:#7a2020}table{width:100%;border-collapse:collapse;font-size:0.82rem}th{text-align:left;color:var(--muted);padding:0.5rem;border-bottom:1px solid var(--border);font-size:0.75rem;text-transform:uppercase}td{padding:0.5rem;border-bottom:1px solid var(--border)}.empty{color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center}.tabs{display:flex;gap:0.5rem;margin-bottom:1.5rem}.tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-size:0.85rem;font-family:inherit}.tab.active{background:var(--rust);color:var(--cream);border-color:var(--rust)}.badge-g{background:#1a3a1a;color:#5cb85c;border:1px solid #2d5a2d;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}.badge-y{background:#3a2f1a;color:#f0ad4e;border:1px solid #5a4a2d;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}.badge-r{background:#3a1a1a;color:#d9534f;border:1px solid #5a2d2d;border-radius:3px;padding:0.1rem 0.4rem;font-size:0.72rem}</style></head>
 <body>
-<header>
-  <span class="logo">⬡ Stockyard</span>
-  <span style="color:var(--muted);">/</span>
-  <span style="color:var(--cream);font-weight:600;">Headcount</span>
-  <span class="badge">v0.1.0</span>
-</header>
+<header><span class="logo">&#x2B21; Stockyard</span><span style="color:var(--muted)">/</span><span style="color:var(--cream);font-weight:600">Headcount</span><span class="badge">HR</span></header>
 <main>
-  <div class="hero">
-    <h1>Headcount</h1>
-    <p>Team directory and org chart — names, roles, contact info, who reports to whom</p>
-  </div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="stat-items">—</div>
-      <div class="stat-label">Total Items</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">9160</div>
-      <div class="stat-label">Port</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="stat-tier">—</div>
-      <div class="stat-label">Tier</div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Tier &amp; Limits</h2>
-    <div class="tier-box">
-      <div class="tier">
-        <div class="tier-name">Free</div>
-        <div class="tier-desc">25 people</div>
-        <div class="tier-price">$0/mo</div>
-      </div>
-      <div class="tier pro">
-        <div class="tier-name">Pro</div>
-        <div class="tier-desc">Unlimited people</div>
-        <div class="tier-price">$1.99/mo</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>API Endpoints</h2>
-    <table class="endpoint-table">
-      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td class="method">GET</td><td>/health</td><td>Health check</td></tr>
-        <tr><td class="method">GET</td><td>/api/version</td><td>Version info</td></tr>
-        <tr><td class="method">GET</td><td>/api/limits</td><td>Current tier limits</td></tr>
-        <tr><td class="method">GET</td><td>/api/items</td><td>List items</td></tr>
-        <tr><td class="method">POST</td><td>/api/items</td><td>Create item</td></tr>
-        <tr><td class="method">GET</td><td>/api/items/{id}</td><td>Get item</td></tr>
-        <tr><td class="method">PUT</td><td>/api/items/{id}</td><td>Update item</td></tr>
-        <tr><td class="method">DELETE</td><td>/api/items/{id}</td><td>Delete item</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="stats"><div class="stat"><div class="stat-value" id="s1">0</div><div class="stat-label">Active Employees</div></div><div class="stat"><div class="stat-value" id="s2">0</div><div class="stat-label">Pending Leave</div></div><div class="stat"><div class="stat-value" id="s3">FREE</div><div class="stat-label">Tier</div></div></div>
+<div class="tabs"><button class="tab active" onclick="showTab('employees')">Employees</button><button class="tab" onclick="showTab('leave')">Leave Requests</button><button class="tab" onclick="showTab('depts')">Departments</button></div>
+<div id="tab-employees">
+<div class="grid">
+<div class="card"><h2>Add Employee</h2>
+<div class="form-row"><input id="f-fname" placeholder="First name"><input id="f-lname" placeholder="Last name"></div>
+<div class="form-row"><input id="f-email" placeholder="Email"><input id="f-title" placeholder="Job title"></div>
+<div class="form-row"><select id="f-dept"><option value="">-- Department --</option></select><input id="f-start" type="date"></div>
+<button class="btn" onclick="addEmployee()">Add Employee</button></div>
+<div class="card"><h2>Departments</h2>
+<div class="form-row"><input id="f-dname" placeholder="Department name"><button class="btn btn-sm" onclick="addDept()">Add</button></div>
+<div id="dept-inline"><div class="empty">No departments</div></div></div>
+</div>
+<div class="card full"><h2>All Employees</h2><div id="emp-list"><div class="empty">No employees</div></div></div>
+</div>
+<div id="tab-leave" style="display:none">
+<div class="grid">
+<div class="card"><h2>Submit Leave Request</h2>
+<div class="form-row"><select id="l-emp"><option value="">-- Employee --</option></select></div>
+<div class="form-row"><select id="l-type"><option>vacation</option><option>sick</option><option>personal</option><option>parental</option></select></div>
+<div class="form-row"><input id="l-start" type="date"><input id="l-end" type="date"></div>
+<button class="btn" onclick="submitLeave()">Submit Request</button></div>
+<div class="card"><h2>Filter</h2><div class="form-row"><select id="l-filter" onchange="loadLeave()"><option value="">All</option><option>pending</option><option>approved</option><option>denied</option></select></div></div>
+</div>
+<div class="card full"><h2>Leave Requests</h2><div id="leave-list"><div class="empty">No requests</div></div></div>
+</div>
+<div id="tab-depts" style="display:none"><div class="card full"><h2>Departments &amp; Headcount</h2><div id="dept-list"><div class="empty">No departments</div></div></div></div>
 </main>
-<footer>
-  <a href="https://stockyard.dev">stockyard.dev</a> &mdash; Operations & Teams &mdash; Apache 2.0
-</footer>
 <script>
-fetch('/api/limits').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-tier').textContent = d.tier.toUpperCase();
-});
-fetch('/api/items').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-items').textContent = Array.isArray(d) ? d.length : '0';
-});
-</script>
-</body>
-</html>`)
+var depts=[];
+function showTab(t){document.querySelectorAll('.tab').forEach(function(b,i){b.classList.toggle('active',['employees','leave','depts'][i]===t)});['employees','leave','depts'].forEach(function(id){var el=document.getElementById('tab-'+id);if(el)el.style.display=id===t?'block':'none'})}
+function load(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){document.getElementById('s1').textContent=d.active_employees||0;document.getElementById('s2').textContent=d.pending_leave||0})}
+function loadDepts(){fetch('/api/departments').then(function(r){return r.json()}).then(function(list){depts=list;var sel=document.getElementById('f-dept');sel.innerHTML='<option value="">-- Department --</option>';list.forEach(function(d){sel.innerHTML+='<option value="'+d.id+'">'+d.name+'</option>'});var inl=document.getElementById('dept-inline');inl.innerHTML=list.length?list.map(function(d){return'<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid var(--border)"><span>'+d.name+'</span><button class="btn-sm btn-danger btn" onclick="delDept('+d.id+')">x</button></div>'}).join(''):'<div class="empty">No departments</div>';var dl=document.getElementById('dept-list');dl.innerHTML=list.length?'<table><thead><tr><th>Name</th><th>Headcount</th></tr></thead><tbody>'+list.map(function(d){return'<tr><td>'+d.name+'</td><td>'+d.head_count+'</td></tr>'}).join('')+"</tbody></table>":'<div class="empty">No departments</div>'})}
+function loadEmployees(){fetch('/api/employees').then(function(r){return r.json()}).then(function(list){var el=document.getElementById('l-emp');el.innerHTML='<option value="">-- Employee --</option>';list.forEach(function(e){el.innerHTML+='<option value="'+e.id+'">'+e.first_name+' '+e.last_name+'</option>'});var tbl=document.getElementById('emp-list');tbl.innerHTML=list.length?'<table><thead><tr><th>Name</th><th>Title</th><th>Dept</th><th>Start</th><th>Status</th><th></th></tr></thead><tbody>'+list.map(function(e){var cls=e.status==='active'?'badge-g':'badge-r';return'<tr><td>'+e.first_name+' '+e.last_name+'</td><td>'+e.title+'</td><td>'+e.dept_name+'</td><td>'+e.start_date+'</td><td><span class="'+cls+'">'+e.status+'</span></td><td><button class="btn btn-sm btn-danger" onclick="delEmp('+e.id+')">Remove</button></td></tr>'}).join('')+"</tbody></table>":'<div class="empty">No employees yet</div>' })}
+function loadLeave(){var st=document.getElementById('l-filter').value;fetch('/api/leave'+(st?'?status='+st:'')).then(function(r){return r.json()}).then(function(list){var el=document.getElementById('leave-list');el.innerHTML=list.length?'<table><thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Status</th><th></th></tr></thead><tbody>'+list.map(function(l){var cls=l.status==='approved'?'badge-g':l.status==='denied'?'badge-r':'badge-y';return'<tr><td>'+l.employee_name+'</td><td>'+l.leave_type+'</td><td>'+l.start_date+'</td><td>'+l.end_date+'</td><td><span class="'+cls+'">'+l.status+'</span></td><td>'+( l.status==='pending'?'<button class="btn btn-sm" onclick="approveLeave('+l.id+')">Approve</button> <button class="btn btn-sm btn-danger" onclick="denyLeave('+l.id+')">Deny</button>':'')+'</td></tr>'}).join('')+"</tbody></table>":'<div class="empty">No requests</div>'})}
+function addDept(){var n=document.getElementById('f-dname').value.trim();if(!n)return;fetch('/api/departments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})}).then(function(){document.getElementById('f-dname').value='';loadDepts();load()})}
+function delDept(id){fetch('/api/departments/'+id,{method:'DELETE'}).then(function(){loadDepts();load()})}
+function addEmployee(){var d={first_name:document.getElementById('f-fname').value.trim(),last_name:document.getElementById('f-lname').value.trim(),email:document.getElementById('f-email').value.trim(),title:document.getElementById('f-title').value.trim(),dept_id:parseInt(document.getElementById('f-dept').value)||0,start_date:document.getElementById('f-start').value,status:'active'};if(!d.first_name||!d.last_name)return;fetch('/api/employees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){loadEmployees();load()})}
+function delEmp(id){fetch('/api/employees/'+id,{method:'DELETE'}).then(function(){loadEmployees();load()})}
+function submitLeave(){var d={employee_id:parseInt(document.getElementById('l-emp').value)||0,leave_type:document.getElementById('l-type').value,start_date:document.getElementById('l-start').value,end_date:document.getElementById('l-end').value};if(!d.employee_id||!d.start_date||!d.end_date)return;fetch('/api/leave',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){loadLeave();load()})}
+function approveLeave(id){fetch('/api/leave/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'approved'})}).then(function(){loadLeave();load()})}
+function denyLeave(id){fetch('/api/leave/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'denied'})}).then(function(){loadLeave();load()})}
+load();loadDepts();loadEmployees();
+</script></body></html>`)
