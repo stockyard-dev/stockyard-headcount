@@ -1,20 +1,32 @@
 package store
-import("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
-type DB struct{*sql.DB}
-type Department struct{ID int64 `json:"id"`;Name string `json:"name"`;HeadCount int `json:"head_count,omitempty"`;CreatedAt time.Time `json:"created_at"`}
-type Employee struct{ID int64 `json:"id"`;DeptID int64 `json:"dept_id"`;DeptName string `json:"dept_name,omitempty"`;FirstName string `json:"first_name"`;LastName string `json:"last_name"`;Email string `json:"email"`;Title string `json:"title"`;StartDate string `json:"start_date"`;Status string `json:"status"`;CreatedAt time.Time `json:"created_at"`}
-type LeaveRequest struct{ID int64 `json:"id"`;EmployeeID int64 `json:"employee_id"`;EmployeeName string `json:"employee_name,omitempty"`;LeaveType string `json:"leave_type"`;StartDate string `json:"start_date"`;EndDate string `json:"end_date"`;Status string `json:"status"`;Notes string `json:"notes"`;CreatedAt time.Time `json:"created_at"`}
-func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"headcount.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
-func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS departments(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,dept_id INTEGER NOT NULL,first_name TEXT NOT NULL,last_name TEXT NOT NULL,email TEXT DEFAULT '',title TEXT DEFAULT '',start_date TEXT DEFAULT '',status TEXT DEFAULT 'active',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS leave_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,leave_type TEXT DEFAULT 'vacation',start_date TEXT NOT NULL,end_date TEXT NOT NULL,status TEXT DEFAULT 'pending',notes TEXT DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);return err}
-func(db *DB)ListDepartments()([]Department,error){rows,err:=db.Query(`SELECT d.id,d.name,COUNT(e.id),d.created_at FROM departments d LEFT JOIN employees e ON e.dept_id=d.id AND e.status='active' GROUP BY d.id ORDER BY d.name`);if err!=nil{return nil,err};defer rows.Close();var out[]Department;for rows.Next(){var d Department;rows.Scan(&d.ID,&d.Name,&d.HeadCount,&d.CreatedAt);out=append(out,d)};return out,nil}
-func(db *DB)CreateDepartment(d *Department)error{res,err:=db.Exec(`INSERT INTO departments(name)VALUES(?)`,d.Name);if err!=nil{return err};d.ID,_=res.LastInsertId();return nil}
-func(db *DB)DeleteDepartment(id int64)error{_,err:=db.Exec(`DELETE FROM departments WHERE id=?`,id);return err}
-func(db *DB)ListEmployees(deptID int64)([]Employee,error){q:=`SELECT e.id,e.dept_id,COALESCE(d.name,''),e.first_name,e.last_name,e.email,e.title,e.start_date,e.status,e.created_at FROM employees e LEFT JOIN departments d ON d.id=e.dept_id`;var rows *sql.Rows;var err error;if deptID>0{rows,err=db.Query(q+` WHERE e.dept_id=? ORDER BY e.last_name`,deptID)}else{rows,err=db.Query(q+` ORDER BY e.last_name`)};if err!=nil{return nil,err};defer rows.Close();var out[]Employee;for rows.Next(){var e Employee;rows.Scan(&e.ID,&e.DeptID,&e.DeptName,&e.FirstName,&e.LastName,&e.Email,&e.Title,&e.StartDate,&e.Status,&e.CreatedAt);out=append(out,e)};return out,nil}
-func(db *DB)CreateEmployee(e *Employee)error{res,err:=db.Exec(`INSERT INTO employees(dept_id,first_name,last_name,email,title,start_date,status)VALUES(?,?,?,?,?,?,?)`,e.DeptID,e.FirstName,e.LastName,e.Email,e.Title,e.StartDate,e.Status);if err!=nil{return err};e.ID,_=res.LastInsertId();return nil}
-func(db *DB)UpdateEmployeeStatus(id int64,status string)error{_,err:=db.Exec(`UPDATE employees SET status=? WHERE id=?`,status,id);return err}
-func(db *DB)DeleteEmployee(id int64)error{_,err:=db.Exec(`DELETE FROM employees WHERE id=?`,id);return err}
-func(db *DB)ListLeaveRequests(status string)([]LeaveRequest,error){q:=`SELECT l.id,l.employee_id,COALESCE(e.first_name||' '||e.last_name,''),l.leave_type,l.start_date,l.end_date,l.status,l.notes,l.created_at FROM leave_requests l LEFT JOIN employees e ON e.id=l.employee_id`;var rows *sql.Rows;var err error;if status!=""{rows,err=db.Query(q+` WHERE l.status=? ORDER BY l.created_at DESC`,status)}else{rows,err=db.Query(q+` ORDER BY l.created_at DESC LIMIT 50`)};if err!=nil{return nil,err};defer rows.Close();var out[]LeaveRequest;for rows.Next(){var l LeaveRequest;rows.Scan(&l.ID,&l.EmployeeID,&l.EmployeeName,&l.LeaveType,&l.StartDate,&l.EndDate,&l.Status,&l.Notes,&l.CreatedAt);out=append(out,l)};return out,nil}
-func(db *DB)CreateLeaveRequest(l *LeaveRequest)error{res,err:=db.Exec(`INSERT INTO leave_requests(employee_id,leave_type,start_date,end_date,notes)VALUES(?,?,?,?,?)`,l.EmployeeID,l.LeaveType,l.StartDate,l.EndDate,l.Notes);if err!=nil{return err};l.ID,_=res.LastInsertId();l.Status="pending";return nil}
-func(db *DB)UpdateLeaveStatus(id int64,status string)error{_,err:=db.Exec(`UPDATE leave_requests SET status=? WHERE id=?`,status,id);return err}
-func(db *DB)CountEmployees()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM employees WHERE status='active'`).Scan(&n);return n,nil}
-func(db *DB)CountPending()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM leave_requests WHERE status='pending'`).Scan(&n);return n,nil}
+import ("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{db *sql.DB}
+type Event struct{ID string `json:"id"`;Name string `json:"name"`;UserID string `json:"user_id,omitempty"`;SessionID string `json:"session_id,omitempty"`;Page string `json:"page,omitempty"`;Referrer string `json:"referrer,omitempty"`;UA string `json:"user_agent,omitempty"`;IP string `json:"ip,omitempty"`;Country string `json:"country,omitempty"`;Props string `json:"properties,omitempty"`;CreatedAt string `json:"created_at"`}
+type TopItem struct{Name string `json:"name"`;Count int `json:"count"`}
+func Open(d string)(*DB,error){if err:=os.MkdirAll(d,0755);err!=nil{return nil,err};db,err:=sql.Open("sqlite",filepath.Join(d,"headcount.db")+"?_journal_mode=WAL&_busy_timeout=5000");if err!=nil{return nil,err}
+db.Exec(`CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,name TEXT NOT NULL,user_id TEXT DEFAULT '',session_id TEXT DEFAULT '',page TEXT DEFAULT '',referrer TEXT DEFAULT '',user_agent TEXT DEFAULT '',ip TEXT DEFAULT '',country TEXT DEFAULT '',props TEXT DEFAULT '',created_at TEXT DEFAULT(datetime('now')))`)
+db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_name ON events(name)`)
+db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_page ON events(page)`)
+db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(created_at)`)
+return &DB{db:db},nil}
+func(d *DB)Close()error{return d.db.Close()}
+func genID()string{return fmt.Sprintf("%d",time.Now().UnixNano())}
+func now()string{return time.Now().UTC().Format(time.RFC3339)}
+func(d *DB)Track(e *Event)error{e.ID=genID();e.CreatedAt=now();if e.Name==""{e.Name="pageview"}
+_,err:=d.db.Exec(`INSERT INTO events(id,name,user_id,session_id,page,referrer,user_agent,ip,country,props,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?)`,e.ID,e.Name,e.UserID,e.SessionID,e.Page,e.Referrer,e.UA,e.IP,e.Country,e.Props,e.CreatedAt);return err}
+func(d *DB)TopPages(days int)[]TopItem{if days<=0{days=30};since:=time.Now().AddDate(0,0,-days).UTC().Format(time.RFC3339)
+rows,_:=d.db.Query(`SELECT page,COUNT(*) c FROM events WHERE page!='' AND created_at>=? GROUP BY page ORDER BY c DESC LIMIT 20`,since);if rows==nil{return nil};defer rows.Close()
+var o []TopItem;for rows.Next(){var t TopItem;rows.Scan(&t.Name,&t.Count);o=append(o,t)};return o}
+func(d *DB)TopReferrers(days int)[]TopItem{if days<=0{days=30};since:=time.Now().AddDate(0,0,-days).UTC().Format(time.RFC3339)
+rows,_:=d.db.Query(`SELECT referrer,COUNT(*) c FROM events WHERE referrer!='' AND created_at>=? GROUP BY referrer ORDER BY c DESC LIMIT 20`,since);if rows==nil{return nil};defer rows.Close()
+var o []TopItem;for rows.Next(){var t TopItem;rows.Scan(&t.Name,&t.Count);o=append(o,t)};return o}
+func(d *DB)TopEvents(days int)[]TopItem{if days<=0{days=30};since:=time.Now().AddDate(0,0,-days).UTC().Format(time.RFC3339)
+rows,_:=d.db.Query(`SELECT name,COUNT(*) c FROM events WHERE created_at>=? GROUP BY name ORDER BY c DESC LIMIT 20`,since);if rows==nil{return nil};defer rows.Close()
+var o []TopItem;for rows.Next(){var t TopItem;rows.Scan(&t.Name,&t.Count);o=append(o,t)};return o}
+func(d *DB)UniqueUsers(days int)int{if days<=0{days=30};since:=time.Now().AddDate(0,0,-days).UTC().Format(time.RFC3339);var n int;d.db.QueryRow(`SELECT COUNT(DISTINCT user_id) FROM events WHERE user_id!='' AND created_at>=?`,since).Scan(&n);return n}
+func(d *DB)UniqueSessions(days int)int{if days<=0{days=30};since:=time.Now().AddDate(0,0,-days).UTC().Format(time.RFC3339);var n int;d.db.QueryRow(`SELECT COUNT(DISTINCT session_id) FROM events WHERE session_id!='' AND created_at>=?`,since).Scan(&n);return n}
+func(d *DB)RecentEvents(limit int)[]Event{if limit<=0{limit=50};rows,_:=d.db.Query(`SELECT id,name,user_id,session_id,page,referrer,user_agent,ip,country,props,created_at FROM events ORDER BY created_at DESC LIMIT ?`,limit);if rows==nil{return nil};defer rows.Close()
+var o []Event;for rows.Next(){var e Event;rows.Scan(&e.ID,&e.Name,&e.UserID,&e.SessionID,&e.Page,&e.Referrer,&e.UA,&e.IP,&e.Country,&e.Props,&e.CreatedAt);o=append(o,e)};return o}
+type Stats struct{TotalEvents int `json:"total_events"`;UniqueUsers int `json:"unique_users"`;UniqueSessions int `json:"unique_sessions"`;Today int `json:"today"`}
+func(d *DB)Stats()Stats{var s Stats;d.db.QueryRow(`SELECT COUNT(*) FROM events`).Scan(&s.TotalEvents);s.UniqueUsers=d.UniqueUsers(30);s.UniqueSessions=d.UniqueSessions(30)
+today:=time.Now().Format("2006-01-02");d.db.QueryRow(`SELECT COUNT(*) FROM events WHERE created_at>=?`,today+"T00:00:00Z").Scan(&s.Today);return s}
