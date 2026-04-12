@@ -6,9 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/stockyard-dev/stockyard-headcount/internal/server"
 	"github.com/stockyard-dev/stockyard-headcount/internal/store"
+	"github.com/stockyard-dev/stockyard/bus"
 )
 
 var version = "dev"
@@ -39,6 +41,15 @@ func main() {
 		log.Fatalf("headcount: %v", err)
 	}
 	defer db.Close()
+
+	// Bus lives one level up from the per-tool data dir so all tools in
+	// a bundle share a single _bus.db. Bus failures are non-fatal.
+	if b, berr := bus.Open(filepath.Dir(dataDir), "headcount"); berr != nil {
+		log.Printf("headcount: bus disabled: %v", berr)
+	} else {
+		defer b.Close()
+		subscribeToBus(b, db)
+	}
 
 	srv := server.New(db, server.DefaultLimits(), dataDir)
 
