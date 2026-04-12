@@ -1,0 +1,40 @@
+{
+  "schema_version": "1",
+  "tool": {
+    "slug": "headcount",
+    "display_name": "Headcount",
+    "version": "1.0.0",
+    "description": "Track signups, logins, active users, and funnels. No cookie banners, no GDPR nightmares — your data stays on your server. Mixpanel for teams who can't send user behavior to a SaaS.",
+    "category": "operations"
+  },
+  "data_model": {
+    "tables": [
+      {
+        "name": "events",
+        "sync": "replicated",
+        "backup": "encrypted",
+        "columns": [
+          {"name": "id",         "type": "text",      "primary_key": true},
+          {"name": "name",       "type": "text",      "required": true, "display": "Event name"},
+          {"name": "page",       "type": "text",      "display": "Page"},
+          {"name": "referrer",   "type": "text",      "display": "Referrer"},
+          {"name": "user_agent", "type": "text",      "pii": true, "display": "User agent"},
+          {"name": "session_id", "type": "text",      "pii": true, "display": "Session ID"},
+          {"name": "country",    "type": "text",      "pii": true, "display": "Country"},
+          {"name": "device",     "type": "text",      "display": "Device"},
+          {"name": "browser",    "type": "text",      "display": "Browser"},
+          {"name": "props",      "type": "json",      "_comment": "Arbitrary event properties"},
+          {"name": "created_at", "type": "timestamp", "editable": false}
+        ]
+      }
+    ]
+  },
+  "config": {"fields": []},
+  "events": {
+    "publishes": [],
+    "subscribes": [
+      {"topic": "contacts.created", "description": "Translates new contacts into a contact_created funnel event so the analytics dashboard reflects business activity, not just web pageviews."},
+      {"topic": "contacts.updated", "description": "Tracks contact updates as a re-engagement signal in the funnel."}
+    ]
+  }
+}
